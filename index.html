@@ -217,7 +217,7 @@
   const rand = (a, b) => a + Math.random() * (b - a);
 
   let W = 0, H = 0, dpr = 1, fontSize = 16, cols = 0;
-  let drops = [], speeds = [], colors = [];
+  let drops = [], speeds = [], colors = [], offsets = [];
 
   function resize() {
     dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -231,12 +231,15 @@
     drops = Array.from({ length: cols }, () => Math.random() * -H / fontSize);
     speeds = Array.from({ length: cols }, () => rand(0.55, 1.15));
     colors = Array.from({ length: cols }, () => pickColor());
+    offsets = Array.from({ length: cols }, () => Math.floor(Math.random() * DATE.length));
     ctx.fillStyle = BG;
     ctx.fillRect(0, 0, W, H);
     if (reduceMotion) drawStatic();
   }
 
   const bit = () => (Math.random() < 0.5 ? '0' : '1');
+  const DATE = '171026';   // 17 10 26
+  const dateChar = (row) => DATE[((row % DATE.length) + DATE.length) % DATE.length];
 
   // ---------- Glitch effects ----------
   // Slide a horizontal band of the canvas sideways (screen-tear)
@@ -287,15 +290,15 @@
       // small sideways jitter on a few characters (lots more during a burst)
       const jitter = Math.random() < (bursting ? 0.15 : 0.02) ? rand(-fontSize, fontSize) * 0.6 : 0;
       const x = i * fontSize + jitter;
+      const row = Math.floor(drops[i]) + offsets[i];
       const y = Math.floor(drops[i]) * fontSize;
 
       const col = bursting && Math.random() < 0.2 ? pickColor() : colors[i];
       ctx.fillStyle = col.c;
-      ctx.fillText(bit(), x, y - fontSize);
-      ctx.fillText(bit(), x, y - fontSize * 2);  // denser body so the column color reads clearly
-      ctx.fillStyle = col.h;                       // head = light tint of the column color
-      ctx.fillText(bit(), x, y);
-
+      ctx.fillText(dateChar(row - 1), x, y - fontSize);
+      ctx.fillText(dateChar(row - 2), x, y - fontSize * 2);
+      ctx.fillStyle = col.h;
+      ctx.fillText(dateChar(row), x, y);
       drops[i] += speeds[i];
       if (y > H && Math.random() > 0.975) {
         drops[i] = Math.random() * -20;
