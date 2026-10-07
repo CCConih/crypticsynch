@@ -30,7 +30,3 @@ Browsers block sound until the visitor's first click, tap or key press. The page
 
 In `placeTags()`, raise the `0.12` in `Math.max(48, Math.min(vw, vh) * 0.12)` to spread texts further apart.
 
-## Hosting with GitHub Pages
-
-Settings → Pages → Source: "Deploy from a branch" → Branch: `main`, folder `/ (root)` → Save.
-The site will be live at `https://<your-username>.github.io/binary-spotlight/` after a minute or two.
