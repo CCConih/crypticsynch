@@ -179,6 +179,31 @@
     .logo, .logo canvas { animation: none; }
     .logo .r, .logo .g { display: none; }
   }
+
+  /* ---------- CRT look: one overlay above everything (delete the .crt div to turn it off) ---------- */
+  #rain, .scene { filter: blur(0.35px) brightness(1.15); }   /* soft phosphor glow */
+  .crt {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;                    /* above the logo */
+    pointer-events: none;             /* hover still reaches the texts */
+    background:
+      radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, .7) 100%),               /* dark edges */
+      repeating-linear-gradient(0deg, rgba(0, 0, 0, .28) 0 1px, transparent 1px 3px),          /* scanlines */
+      repeating-linear-gradient(90deg, rgba(255, 0, 60, .07) 0 1px, rgba(0, 255, 120, .05) 1px 2px,
+                                rgba(40, 80, 255, .08) 2px 3px);                              /* RGB phosphor stripes */
+    animation: crt-flicker 4s steps(1) infinite;
+  }
+  @keyframes crt-flicker {
+    0%   { opacity: 1; }
+    31%  { opacity: .9; }
+    32%  { opacity: 1; }
+    77%  { opacity: .85; }
+    78%  { opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .crt { animation: none; }
+  }
 </style>
 </head>
 <body>
@@ -191,6 +216,7 @@
     <canvas class="r"></canvas>
     <canvas class="g"></canvas>
   </div>
+  <div class="crt" aria-hidden="true"></div>
 
 
 <script>
@@ -218,6 +244,8 @@
     return PALETTE[0];
   }
   const rand = (a, b) => a + Math.random() * (b - a);
+  // rows per frame, scaled so the rain keeps its old on-screen speed (it used 18px / 14px characters)
+  const rainSpeed = () => rand(0.55, 1.15) * (W < 600 ? 14 : 18) / fontSize;
 
   let W = 0, H = 0, dpr = 1, fontSize = 16, cols = 0;
   let drops = [], speeds = [], colors = [], offsets = [];
@@ -229,10 +257,10 @@
     canvas.width = Math.floor(W * dpr);
     canvas.height = Math.floor(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    fontSize = W < 600 ? 14 : 18;
+    fontSize = logoFont();   // same character size as the logo
     cols = Math.ceil(W / fontSize);
     drops = Array.from({ length: cols }, () => Math.random() * -H / fontSize);
-    speeds = Array.from({ length: cols }, () => rand(0.55, 1.15));
+    speeds = Array.from({ length: cols }, rainSpeed);
     colors = Array.from({ length: cols }, () => pickColor());
     offsets = Array.from({ length: cols }, () => Math.floor(Math.random() * DATE.length));
     ctx.fillStyle = BG;
@@ -307,7 +335,7 @@
       drops[i] += speeds[i];
       if (y > H && Math.random() > 0.975) {
         drops[i] = Math.random() * -20;
-        speeds[i] = rand(0.55, 1.15);
+        speeds[i] = rainSpeed();
         colors[i] = pickColor();
       }
     }
@@ -368,6 +396,7 @@
   const logoChar = () => LOGO_CHARS[Math.floor(Math.random() * LOGO_CHARS.length)];
 
   const logoBox = document.querySelector('.logo');
+  const logoFont = () => Math.max(6, Math.round(logoBox.offsetWidth / 60));   // ~60 rows across the logo; the rain uses it too
   const [logoCv, ...logoCopies] = logoBox.querySelectorAll('canvas');
   const lctx = logoCv.getContext('2d');
   const logoMask = new Image();
@@ -380,7 +409,7 @@
     LS = logoBox.offsetWidth;   // offsetWidth ignores the jitter transform
     for (const c of [logoCv, ...logoCopies]) c.width = c.height = Math.floor(LS * dpr);
     lctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    lFont = Math.max(6, Math.round(LS / 60));   // ~60 rows of characters
+    lFont = logoFont();
     lCols = lRows = Math.floor(LS / lFont);
     lDrops = Array.from({ length: lCols }, () => rand(-lRows, lRows));
     lSpeeds = Array.from({ length: lCols }, () => rand(0.35, 0.9));
