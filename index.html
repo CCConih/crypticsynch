@@ -597,7 +597,7 @@
     const t0 = performance.now();
     let id;
     const tick = (t) => {
-      const k = Math.min(1, (t - t0) / ms);
+      const k = Math.min(1, Math.max(0, (t - t0) / ms));   // rAF time can be slightly before t0
       set(from + (to - from) * k);
       if (k < 1) id = requestAnimationFrame(tick); else if (done) done();
     };
@@ -610,20 +610,23 @@
     el.preload = 'auto';
     el.loop = true;
     el.volume = 0;
-    let cancel = () => {};
+    let cancel = () => {}, wanted = false;
     return {
       play() {
+        wanted = true;
         cancel();
         el.play().catch(() => {});
         cancel = fade(el.volume, 1, FADE_MS, (v) => { el.volume = v; });
       },
       stop() {
+        wanted = false;
         cancel();
         cancel = fade(el.volume, 0, FADE_MS, (v) => { el.volume = v; }, () => el.pause());
       },
       prime() {   // iOS needs each audio element touched once inside a tap
         el.muted = true;
-        el.play().then(() => { el.pause(); el.muted = false; }).catch(() => { el.muted = false; });
+        // don't pause if play() was called meanwhile (the tap landed on this text)
+        el.play().then(() => { if (!wanted) el.pause(); el.muted = false; }).catch(() => { el.muted = false; });
       },
     };
   }
