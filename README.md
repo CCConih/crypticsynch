@@ -34,5 +34,5 @@ Logos are embedded as masks (`LOGO_MASK`, `CAT_MASK`); only their shape (alpha) 
 - Old-TV noise: add `display: none;` to the `.tv` CSS rule (don't delete the canvas; the script uses it).
 - Visitors with "reduce motion" turned on get a still version without the noise.
 
-## Spacing between texts
-In `placeTags()`, raise the `0.12` in `Math.max(48, Math.min(vw, vh) * 0.12)` to spread texts further apart. Texts are re-placed whenever the window size changes.
+## Where the texts go
+The three texts land at random spots in a band just under the cat. In `placeTags()`, `BAND` is how far below the cat they may go (140px) and `GAP` is the minimum space between two texts (12px). They are re-placed whenever the window size changes.

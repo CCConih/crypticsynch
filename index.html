@@ -582,7 +582,7 @@
   const FADE_MS = 350;           // fade in / out time
   const STOP_ON_LEAVE = true;    // false = keep playing until another text is hovered
 
-  // ---------- Place the texts at random spots (avoiding the logo and each other) ----------
+  // ---------- Place the texts just under the cat ----------
   const scene = document.getElementById('scene');
   const tags = ITEMS.map((item, i) => {
     const el = document.createElement('div');
@@ -593,57 +593,37 @@
     return el;
   });
 
-  function shuffle(arr) {
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
-  }
-
-  // New random layout on every refresh. Each text keeps at least `gap` px of
-  // empty space around it (from the logo and from every other text).
+  // Texts sit at random spots in a band just under the cat, never on top of each other.
   function placeTags() {
     const vw = window.innerWidth, vh = window.innerHeight;
     const cw = centerBox.offsetWidth, ch = centerBox.offsetHeight;   // the CSS decides the size
-    const edge = 16;
-    const hit = (a, b, g) => a.x - g < b.x + b.w && a.x + a.w + g > b.x && a.y - g < b.y + b.h && a.y + a.h + g > b.y;
-    const order = shuffle(tags.slice());
-
-    let gap = Math.max(48, Math.min(vw, vh) * 0.12);
-    for (let attempt = 0; attempt < 8; attempt++) {
-      const top = topBox.getBoundingClientRect();
-      const placed = [
-        { x: vw / 2 - cw / 2, y: vh / 2 - ch / 2, w: cw, h: ch },
-        { x: top.left, y: top.top, w: top.width, h: top.height },
-      ];
-      const boxes = [];
+    const BAND = 140;   // how far below the cat the texts may go (px)
+    const GAP = 12;     // minimum space between two texts (px)
+    const bandW = Math.min(vw - 32, Math.max(cw, 360));   // at least room for three texts side by side
+    const left = vw / 2 - bandW / 2, top = vh / 2 + ch / 2 + 12;
+    const bandH = Math.max(0, Math.min(BAND, vh - 16 - top));   // stay on screen
+    const hit = (a, b) => a.x - GAP < b.x + b.w && a.x + a.w + GAP > b.x && a.y - GAP < b.y + b.h && a.y + a.h + GAP > b.y;
+    let placed;
+    // early spots can box in the last text on small screens, so retry the whole layout a few times
+    for (let attempt = 0; attempt < 20; attempt++) {
+      placed = [];
       let ok = true;
-      for (const el of order) {
+      for (const el of tags) {
         const w = el.offsetWidth, h = el.offsetHeight;
-        let found = null;
-        for (let t = 0; t < 500 && !found; t++) {
-          const cand = {
-            x: edge + Math.random() * Math.max(1, vw - w - edge * 2),
-            y: edge + Math.random() * Math.max(1, vh - h - edge * 2),
-            w, h,
-          };
-          if (!placed.some((p) => hit(cand, p, gap))) found = cand;
-          else if (attempt === 7 && t === 499) found = cand; // last resort: overlap beats every text stuck at top-left
+        let box;
+        for (let t = 0; t < 100; t++) {   // if nothing fits, the last spot is kept, overlap or not
+          box = { x: left + Math.random() * Math.max(0, bandW - w), y: top + Math.random() * Math.max(0, bandH - h), w, h };
+          if (!placed.some((p) => hit(box, p))) break;
         }
-        if (!found) { ok = false; break; }
-        placed.push(found);
-        boxes.push([el, found]);
+        if (placed.some((p) => hit(box, p))) ok = false;
+        placed.push(box);
       }
-      if (ok) {
-        boxes.forEach(([el, box]) => {
-          el.style.left = (box.x / vw * 100) + '%';
-          el.style.top = (box.y / vh * 100) + '%';
-        });
-        return;
-      }
-      gap *= 0.8; // screen too small for this spacing: loosen it a little and retry
+      if (ok) break;
     }
+    tags.forEach((el, i) => {
+      el.style.left = (placed[i].x / vw * 100) + '%';
+      el.style.top = (placed[i].y / vh * 100) + '%';
+    });
   }
 
   // ---------- Audio players ----------
