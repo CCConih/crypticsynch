@@ -10,20 +10,15 @@
 <style>
   :root {
     --rain-bg: #000000;
-    --rain: #00ffff;
-    --rain-head: #ffffff;
     --tag: #d6ffff;
     --tag-on: #00ffff;
-    --blue: #0000fe;
     box-sizing: border-box;
     padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --rain-bg: #000000; } }
-  :root[data-theme="dark"] { --rain-bg: #000000; }
 
   *, *::before, *::after { box-sizing: inherit; }
-  html { height: 100%; scroll-padding-top: env(safe-area-inset-top, 0px); }
+  html { height: 100%; }
   body {
     margin: 0;
     height: 100%;
@@ -251,7 +246,6 @@
   const canvas = document.getElementById('rain');
   const ctx = canvas.getContext('2d');
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const coarse = window.matchMedia('(pointer: coarse)').matches;
 
   // Palette sampled from the logo: electric blue, cyan, violet, white, plus the red specks
   const BG = '#000000';
@@ -297,6 +291,7 @@
     tv.width = Math.ceil(W * TV_SCALE);
     tv.height = Math.ceil(H * TV_SCALE);
     logos.forEach((l) => l.size());
+    placeTags();   // logos moved/resized, so find new free spots for the texts
   }
 
   const bit = () => (Math.random() < 0.5 ? '0' : '1');
@@ -436,7 +431,7 @@
     const mask = new Image();
     const ch = () => chars[Math.floor(Math.random() * chars.length)];
     let LW = 0, LH = 0, font = 7, cols = 0, rows = 0, lum = null;
-    let drops = [], speeds = [], lit = [];
+    let drops = [], speeds = [], lit = [], frame = 0;
 
     function size() {
       if (!mask.naturalWidth) return;
@@ -530,7 +525,7 @@
           g.restore();
         }
       }
-      sync();
+      if (++frame % 3 === 0) sync();   // the .r/.g slices only flash briefly, so a slightly old copy is fine
     }
 
     function drawStatic() {
@@ -562,8 +557,7 @@
   //  TEXT + AUDIO SETUP — edit this list.
   //  src can be:
   //    ''                                   -> test tone (so you can try it now)
-  //    'https://example.com/song.mp3'       -> direct audio file (mp3, m4a, ogg, wav)
-  //    'https://soundcloud.com/artist/track'-> SoundCloud track (public track URL)
+  //    'audio/song.mp3'                     -> audio file in this repo (mp3, m4a, ogg, wav)
   // =====================================================================
   const ITEMS = [
     { text: 'teaser 1', src: 'audio/Berdansalah%20-%20Teaser%2040%20Sec.mp3' },
@@ -656,7 +650,7 @@
           lfo.connect(lfoGain).connect(lp.frequency);
           o1.connect(lp); o2.connect(lp); lp.connect(g).connect(actx.destination);
           o1.start(); o2.start(); lfo.start();
-          nodes = { g, stop: () => { o1.stop(); o2.stop(); lfo.stop(); } };
+          nodes = { g };
         }
         const now = actx.currentTime;
         nodes.g.gain.cancelScheduledValues(now);
@@ -673,6 +667,7 @@
   }
 
   function fade(from, to, ms, set, done) {
+    if (document.hidden) { set(to); if (done) done(); return () => {}; }   // rAF doesn't run in hidden tabs
     const t0 = performance.now();
     let id;
     const tick = (t) => {
@@ -710,64 +705,13 @@
     };
   }
 
-  let scApi = null;
-  function loadSoundCloudApi() {
-    if (!scApi) {
-      scApi = new Promise((resolve, reject) => {
-        const sc = document.createElement('script');
-        sc.src = 'https://w.soundcloud.com/player/api.js';
-        sc.onload = () => resolve(window.SC);
-        sc.onerror = reject;
-        document.head.appendChild(sc);
-      });
-    }
-    return scApi;
-  }
-  function soundCloudPlayer(url) {
-    const iframe = document.createElement('iframe');
-    iframe.allow = 'autoplay';
-    iframe.title = 'SoundCloud player';
-    iframe.style.cssText = 'position:absolute;left:-9999px;top:0;width:1px;height:1px;border:0;';
-    iframe.src = 'https://w.soundcloud.com/player/?url=' + encodeURIComponent(url) + '&auto_play=false&buying=false&sharing=false&download=false&show_artwork=false';
-    document.body.appendChild(iframe);
-    let widget = null, ready = false, wantPlay = false, vol = 0, cancel = () => {};
-    loadSoundCloudApi().then((SC) => {
-      widget = SC.Widget(iframe);
-      widget.bind(SC.Widget.Events.READY, () => {
-        ready = true;
-        widget.setVolume(0);
-        if (wantPlay) api.play();
-      });
-      widget.bind(SC.Widget.Events.FINISH, () => { if (wantPlay) { widget.seekTo(0); widget.play(); } });
-    }).catch(() => console.warn('SoundCloud API failed to load'));
-    const api = {
-      play() {
-        wantPlay = true;
-        if (!ready) return;
-        cancel();
-        widget.play();
-        cancel = fade(vol, 100, FADE_MS, (v) => { vol = v; widget.setVolume(v); });
-      },
-      stop() {
-        wantPlay = false;
-        if (!ready) return;
-        cancel();
-        cancel = fade(vol, 0, FADE_MS, (v) => { vol = v; widget.setVolume(v); }, () => widget.pause());
-      },
-      prime() {},
-    };
-    return api;
-  }
-
   const players = ITEMS.map((item, i) => {
     if (!item.src) return demoPlayer(i);
-    if (/soundcloud\.com/i.test(item.src)) return soundCloudPlayer(item.src);
     return filePlayer(item.src);
   });
 
   // ---------- Sound unlock (browsers block audio until the first click/tap) ----------
   let unlocked = false;
-  const soundOn = true;
   let activeIndex = -1;
 
   function unlock() {
@@ -778,7 +722,7 @@
       actx.resume();
     } catch (e) {}
     players.forEach((p) => p.prime());
-    if (activeIndex >= 0 && soundOn) players[activeIndex].play();
+    if (activeIndex >= 0) players[activeIndex].play();
   }
   window.addEventListener('pointerdown', unlock);
   window.addEventListener('keydown', unlock);
@@ -796,7 +740,7 @@
     activeIndex = index;
     if (index >= 0) {
       tags[index].classList.add('playing');
-      if (unlocked && soundOn) players[index].play();
+      if (unlocked) players[index].play();
     }
   }
 
@@ -825,6 +769,7 @@
   document.documentElement.addEventListener('pointerleave', () => { target.r = 0; setActive(-1); });
   window.addEventListener('pointerup', (e) => { if (e.pointerType === 'touch') { target.r = 0; setActive(-1); } });
   window.addEventListener('pointercancel', () => { target.r = 0; setActive(-1); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) setActive(-1); });   // no music from a background tab
 
   // A small glow at the center on load, so people know something is under there
   setTimeout(() => { if (!interacted) target.r = baseRadius() * 0.55; }, 500);
@@ -839,7 +784,7 @@
     canvas.style.setProperty('--r', light.r.toFixed(1) + 'px');
   }
 
-  // ---------- Old-TV noise: grain, a rolling band, tracking lines and static bursts ----------
+  // ---------- Old-TV noise: grain, tracking lines and static bursts ----------
   const tv = document.querySelector('.tv');
   const tctx = tv.getContext('2d');
   const TV_SCALE = 0.5;   // drawn at half size; CSS stretches it
@@ -855,7 +800,7 @@
     n.putImageData(img, 0, 0);
   }
   const noise = tctx.createPattern(noiseTile, 'repeat');
-  let tvBand = 0, tvBurst = 0, nextTvBurst = performance.now() + rand(1500, 4000);
+  let tvBurst = 0, nextTvBurst = performance.now() + rand(1500, 4000);
 
   function stepTv(now) {
     const w = tv.width, h = tv.height;
@@ -869,16 +814,6 @@
     tctx.fillStyle = noise;
     tctx.fillRect(0, 0, w + 128, h + 128);
     tctx.restore();
-
-    // a soft bright band rolling slowly down the screen
-    tvBand = (tvBand + h * 0.004) % (h * 1.6);
-    const by = tvBand - h * 0.3, bh = h * 0.3;
-    const band = tctx.createLinearGradient(0, by, 0, by + bh);
-    band.addColorStop(0, 'rgba(200, 220, 255, 0)');
-    band.addColorStop(0.5, 'rgba(200, 220, 255, 0.14)');
-    band.addColorStop(1, 'rgba(200, 220, 255, 0)');
-    tctx.fillStyle = band;
-    tctx.fillRect(0, by, w, bh);
 
     // thin tracking lines flashing across
     const lines = tvBurst > 0 ? 10 : (Math.random() < 0.5 ? 3 : 0);

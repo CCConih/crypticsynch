@@ -1,32 +1,50 @@
-# binary-spotlight
+# crypticsynch
 
-A cryptic landing page: glitchy binary rain in the logo's palette, a flashlight that follows the cursor (or finger), a glitching logo that always stays on top, and hidden text scattered at random positions on every refresh. Hovering a text plays its sound.
+A cryptic landing page: falling "171026" code rain, a cat logo drawn in falling "H" characters in the centre, the 1024 mark drawn in "1024" characters at the top, a flashlight that follows the cursor (or finger), and three hidden texts that play a teaser when hovered. A CRT overlay and old-TV noise sit on top of everything.
 
-Everything lives in a single `index.html` — no build step, no dependencies.
+Everything lives in a single `index.html`, with the teasers in `audio/`. No build step, no dependencies. It is served with GitHub Pages and can be embedded elsewhere (e.g. Squarespace) with an iframe:
 
-## Adding audio
+```html
+<iframe src="https://ccconih.github.io/crypticsynch/" allow="autoplay"
+        style="width:100%;height:100vh;border:0;display:block"></iframe>
+```
 
-Open `index.html` and find the `ITEMS` list near the top of the script:
+## Audio
+
+Find the `ITEMS` list in the script:
 
 ```js
 const ITEMS = [
-  { text: 'placeholder text 01', src: '' },                                    // test tone
-  { text: 'placeholder text 02', src: 'audio/track-02.mp3' },                  // file in this repo
-  { text: 'placeholder text 03', src: 'https://soundcloud.com/artist/track' }, // SoundCloud
+  { text: 'teaser 1', src: 'audio/Berdansalah%20-%20Teaser%2040%20Sec.mp3' },
+  ...
 ];
 ```
 
-- Empty `src` plays a test tone.
-- Direct audio files (mp3/m4a/ogg) are the most reliable. Put them in an `audio/` folder in this repo and use a relative path.
-- SoundCloud tracks must be public.
+- Put files in `audio/` and use a relative path. Write spaces in file names as `%20`.
+- An empty `src` plays a test tone.
+- `FADE_MS`: fade in/out time in ms. `STOP_ON_LEAVE`: `false` keeps a track playing until another text is hovered.
 
-Other settings just below the list:
-- `FADE_MS`: fade in/out time in ms.
-- `STOP_ON_LEAVE`: `false` keeps a track playing until another text is hovered.
+Browsers block sound until the visitor's first click, tap or key press; the page unlocks audio silently on that first interaction. Leaving the tab stops the music.
 
-Browsers block sound until the visitor's first click, tap or key press. The page unlocks audio silently on that first interaction.
+## Settings worth knowing
+
+| Setting | What it does |
+|---|---|
+| `CHAR_PX` | Character size for the rain and both logos (8px). Smaller = more detailed logos, harder to read. |
+| `LOGO_REVEAL_MS` | How long the logos take to form on load. |
+| `LOGO_LEVEL` | Logo brightness: lower is bluer, higher is whiter. |
+| `binaryLogo(..., false)` | The last argument turns a logo's drawn-in glitches (tears, colour split, scattered characters) on or off. |
+| `TV_GRAIN` | Strength of the old-TV grain. Burst timing is in `stepTv()`. |
+| `.logo` / `.logo.top` CSS | Size and position of the centre (cat) and top (1024) logos. |
+
+Logos are embedded as masks (`LOGO_MASK`, `CAT_MASK`); only their shape (alpha) is used.
+
+## Turning effects off
+
+- CRT look: delete `<div class="crt">`.
+- Old-TV noise: add `display: none;` to the `.tv` CSS rule (don't delete the canvas; the script uses it).
+- Visitors with "reduce motion" turned on get a still version without the noise.
 
 ## Spacing between texts
 
-In `placeTags()`, raise the `0.12` in `Math.max(48, Math.min(vw, vh) * 0.12)` to spread texts further apart.
-
+In `placeTags()`, raise the `0.12` in `Math.max(48, Math.min(vw, vh) * 0.12)` to spread texts further apart. Texts are re-placed whenever the window size changes.
