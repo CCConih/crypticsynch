@@ -247,7 +247,7 @@
   const ctx = canvas.getContext('2d');
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // Palette sampled from the logo: electric blue, cyan, violet, white, plus the red specks
+  // Palette sampled from the logo: electric blue, cyan, violet, aqua, white
   const BG = '#000000';
   const FADE = 'rgba(0, 0, 6, 0.09)';   // blue-tinted fade so trails stay blue, not grey
   const PALETTE = [
@@ -255,7 +255,6 @@
     { c: '#00ffff', h: '#d6ffff', w: 28 },   // cyan
     { c: '#3b00d8', h: '#b9a0ff', w: 18 },   // violet
     { c: '#00ffe3', h: '#ccfff8', w: 8 },    // aqua
-    { c: '#ff1430', h: '#ffa3ad', w: 4 },    // red specks
     { c: '#ffffff', h: '#ffffff', w: 2 },    // white
   ];
   const TOTAL_W = PALETTE.reduce((a, p) => a + p.w, 0);
@@ -266,8 +265,9 @@
   }
   const rand = (a, b) => a + Math.random() * (b - a);
   const CHAR_PX = 8;    // character size for the rain and both logos
-  // rows per frame, scaled so the rain keeps its old on-screen speed (it used 18px / 14px characters)
-  const rainSpeed = () => rand(0.55, 1.15) * (W < 600 ? 14 : 18) / fontSize;
+  const RAIN_SPEED = 0.5;   // 1 = the original speed; lower = slower rain
+  // rows per frame, scaled from the original 18px / 14px characters
+  const rainSpeed = () => rand(0.55, 1.15) * (W < 600 ? 14 : 18) / fontSize * RAIN_SPEED;
 
   let W = 0, H = 0, dpr = 1, fontSize = 16, cols = 0;
   let drops = [], speeds = [], colors = [], offsets = [];
@@ -431,7 +431,7 @@
     const mask = new Image();
     const ch = () => chars[Math.floor(Math.random() * chars.length)];
     let LW = 0, LH = 0, font = 7, cols = 0, rows = 0, lum = null;
-    let drops = [], speeds = [], lit = [], frame = 0;
+    let drops = [], speeds = [], lit = [], frame = 0, keep = null;
 
     function size() {
       if (!mask.naturalWidth) return;
@@ -457,6 +457,16 @@
         lum[i] = (d[i * 4 + 3] / 255) * LOGO_LEVEL;
         if (lum[i] > 0.06) lit.push(i);
       }
+
+      // Keep zone: the shape grown by 3 characters. step() wipes everything outside it every frame:
+      // the trail fade can't take alpha below ~4/255 (rounding), so glitch smears otherwise left a
+      // faint haze over the whole box that showed up as a rectangle.
+      keep = document.createElement('canvas');
+      keep.width = cv.width; keep.height = cv.height;
+      const kc = keep.getContext('2d');
+      kc.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const R = 3;
+      for (const i of lit) kc.fillRect((i % cols - R) * font, (((i / cols) | 0) - R) * font, (2 * R + 1) * font, (2 * R + 1) * font);
       if (reduceMotion) drawStatic();
     }
 
@@ -525,6 +535,11 @@
           g.restore();
         }
       }
+      g.save();
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.globalCompositeOperation = 'destination-in';   // alpha outside the keep zone becomes exactly 0
+      g.drawImage(keep, 0, 0);
+      g.restore();
       if (++frame % 3 === 0) sync();   // the .r/.g slices only flash briefly, so a slightly old copy is fine
     }
 
