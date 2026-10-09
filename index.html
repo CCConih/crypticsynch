@@ -582,7 +582,7 @@
   const FADE_MS = 350;           // fade in / out time
   const STOP_ON_LEAVE = true;    // false = keep playing until another text is hovered
 
-  // ---------- Place the texts just under the cat ----------
+  // ---------- Place the texts (scattered on desktop, under the cat on phones) ----------
   const scene = document.getElementById('scene');
   const tags = ITEMS.map((item, i) => {
     const el = document.createElement('div');
@@ -593,18 +593,31 @@
     return el;
   });
 
-  // Texts sit at random spots in a band just under the cat, never on top of each other.
+  // Desktop: texts scattered anywhere, clear of both logos. Phones: in a band just under the cat.
+  // Either way they never sit on top of each other.
   function placeTags() {
     const vw = window.innerWidth, vh = window.innerHeight;
     const cw = centerBox.offsetWidth, ch = centerBox.offsetHeight;   // the CSS decides the size
-    const BAND = 140;   // how far below the cat the texts may go (px)
-    const GAP = 12;     // minimum space between two texts (px)
-    const bandW = Math.min(vw - 32, Math.max(cw, 360));   // at least room for three texts side by side
-    const left = vw / 2 - bandW / 2, top = vh / 2 + ch / 2 + 12;
-    const bandH = Math.max(0, Math.min(BAND, vh - 16 - top));   // stay on screen
-    const hit = (a, b) => a.x - GAP < b.x + b.w && a.x + a.w + GAP > b.x && a.y - GAP < b.y + b.h && a.y + a.h + GAP > b.y;
+    let area, avoid, gap;
+    if (window.matchMedia('(max-width: 600px)').matches) {   // same breakpoint as the CSS
+      const BAND = 140;   // how far below the cat the texts may go (px)
+      const bandW = Math.min(vw - 32, Math.max(cw, 360));   // at least room for three texts side by side
+      const top = vh / 2 + ch / 2 + 12;
+      area = { x: vw / 2 - bandW / 2, y: top, w: bandW, h: Math.max(0, Math.min(BAND, vh - 16 - top)) };
+      avoid = [];
+      gap = 12;   // minimum space between two texts (px)
+    } else {
+      const t = topBox.getBoundingClientRect();
+      area = { x: 16, y: 16, w: vw - 32, h: vh - 32 };
+      avoid = [
+        { x: vw / 2 - cw / 2, y: vh / 2 - ch / 2, w: cw, h: ch },
+        { x: t.left, y: t.top, w: t.width, h: t.height },
+      ];
+      gap = Math.max(48, Math.min(vw, vh) * 0.12);   // raise 0.12 to spread texts further apart
+    }
+    const hit = (a, b) => a.x - gap < b.x + b.w && a.x + a.w + gap > b.x && a.y - gap < b.y + b.h && a.y + a.h + gap > b.y;
     let placed;
-    // early spots can box in the last text on small screens, so retry the whole layout a few times
+    // early spots can box in the last text, so retry the whole layout, loosening the gap a little each time
     for (let attempt = 0; attempt < 20; attempt++) {
       placed = [];
       let ok = true;
@@ -612,13 +625,14 @@
         const w = el.offsetWidth, h = el.offsetHeight;
         let box;
         for (let t = 0; t < 100; t++) {   // if nothing fits, the last spot is kept, overlap or not
-          box = { x: left + Math.random() * Math.max(0, bandW - w), y: top + Math.random() * Math.max(0, bandH - h), w, h };
-          if (!placed.some((p) => hit(box, p))) break;
+          box = { x: area.x + Math.random() * Math.max(0, area.w - w), y: area.y + Math.random() * Math.max(0, area.h - h), w, h };
+          if (!avoid.concat(placed).some((p) => hit(box, p))) break;
         }
-        if (placed.some((p) => hit(box, p))) ok = false;
+        if (avoid.concat(placed).some((p) => hit(box, p))) ok = false;
         placed.push(box);
       }
       if (ok) break;
+      gap *= 0.9;
     }
     tags.forEach((el, i) => {
       el.style.left = (placed[i].x / vw * 100) + '%';

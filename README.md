@@ -35,4 +35,4 @@ Logos are embedded as masks (`LOGO_MASK`, `CAT_MASK`); only their shape (alpha) 
 - Visitors with "reduce motion" turned on get a still version without the noise.
 
 ## Where the texts go
-The three texts land at random spots in a band just under the cat. In `placeTags()`, `BAND` is how far below the cat they may go (140px) and `GAP` is the minimum space between two texts (12px). They are re-placed whenever the window size changes.
+On desktop the three texts are scattered at random spots, clear of both logos; raise the `0.12` in `placeTags()` to spread them further apart. On phones (600px wide or less) they land in a band just under the cat: `BAND` is how far below the cat they may go (140px) and the gap between texts is 12px. They are re-placed whenever the window size changes.
