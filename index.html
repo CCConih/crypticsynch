@@ -843,7 +843,7 @@
   const tv = document.querySelector('.tv');
   const tctx = tv.getContext('2d');
   const TV_SCALE = 0.5;   // drawn at half size; CSS stretches it
-  const TV_GRAIN = 0.07;  // constant grain strength (0-1)
+  const TV_GRAIN = 0.2;   // constant grain strength (0-1)
   const noiseTile = document.createElement('canvas');
   noiseTile.width = noiseTile.height = 128;
   {
@@ -855,12 +855,12 @@
     n.putImageData(img, 0, 0);
   }
   const noise = tctx.createPattern(noiseTile, 'repeat');
-  let tvBand = 0, tvBurst = 0, nextTvBurst = performance.now() + rand(4000, 9000);
+  let tvBand = 0, tvBurst = 0, nextTvBurst = performance.now() + rand(1500, 4000);
 
   function stepTv(now) {
     const w = tv.width, h = tv.height;
     tctx.clearRect(0, 0, w, h);
-    if (now >= nextTvBurst) { tvBurst = Math.floor(rand(3, 9)); nextTvBurst = now + rand(5000, 12000); }
+    if (now >= nextTvBurst) { tvBurst = Math.floor(rand(6, 15)); nextTvBurst = now + rand(3000, 8000); }   // 0.2-0.5s of static every 3-8s
 
     // grain everywhere; heavy static for a few frames during a burst
     tctx.save();
@@ -875,13 +875,13 @@
     const by = tvBand - h * 0.3, bh = h * 0.3;
     const band = tctx.createLinearGradient(0, by, 0, by + bh);
     band.addColorStop(0, 'rgba(200, 220, 255, 0)');
-    band.addColorStop(0.5, 'rgba(200, 220, 255, 0.06)');
+    band.addColorStop(0.5, 'rgba(200, 220, 255, 0.14)');
     band.addColorStop(1, 'rgba(200, 220, 255, 0)');
     tctx.fillStyle = band;
     tctx.fillRect(0, by, w, bh);
 
     // thin tracking lines flashing across
-    const lines = tvBurst > 0 ? 8 : (Math.random() < 0.3 ? 2 : 0);
+    const lines = tvBurst > 0 ? 10 : (Math.random() < 0.5 ? 3 : 0);
     for (let k = 0; k < lines; k++) {
       tctx.globalAlpha = rand(0.2, 0.7);
       tctx.fillStyle = Math.random() < 0.7 ? '#ffffff' : pickColor().c;
