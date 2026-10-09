@@ -46,6 +46,9 @@
     user-select: none;
     transition: color .2s ease, text-shadow .2s ease;
   }
+  @media (max-width: 600px) {          /* phones: long texts wrap instead of running off screen */
+    .tag { white-space: normal; overflow-wrap: anywhere; max-width: calc(100vw - 32px); }
+  }
   .tag::before {
     content: "";
     display: inline-block;
@@ -575,9 +578,9 @@
   //    'audio/song.mp3'                     -> audio file in this repo (mp3, m4a, ogg, wav)
   // =====================================================================
   const ITEMS = [
-    { text: 'teaser 1', src: 'audio/Berdansalah%20-%20Teaser%2040%20Sec.mp3' },
-    { text: 'teaser 2', src: 'audio/Matahari%20Tenggelam%20-%20Teaser%2030%20Sec.mp3' },
-    { text: 'teaser 3', src: 'audio/YAAYO%20-%20Teaser%2030%20Sec.mp3' },
+    { text: '42657264616E73616C61682C206B6172697220696E692074616B2061646120617274696E7961', src: 'audio/Berdansalah%20-%20Teaser%2040%20Sec.mp3' },
+    { text: '4D617461686172692074656E6767656C616D', src: 'audio/Matahari%20Tenggelam%20V2%20-%20Teaser%2030%20Sec.mp3' },
+    { text: '594141594F', src: 'audio/YAAYO%20-%20Teaser%2030%20Sec.mp3' },
   ];
   const FADE_MS = 350;           // fade in / out time
   const STOP_ON_LEAVE = true;    // false = keep playing until another text is hovered
@@ -598,14 +601,16 @@
   function placeTags() {
     const vw = window.innerWidth, vh = window.innerHeight;
     const cw = centerBox.offsetWidth, ch = centerBox.offsetHeight;   // the CSS decides the size
+    tags.forEach((el) => { el.style.left = '0px'; el.style.top = '0px'; });   // measure wrapped size at full width
     let area, avoid, gap;
     if (window.matchMedia('(max-width: 600px)').matches) {   // same breakpoint as the CSS
       const BAND = 140;   // how far below the cat the texts may go (px)
       const bandW = Math.min(vw - 32, Math.max(cw, 360));   // at least room for three texts side by side
       const top = vh / 2 + ch / 2 + 12;
-      area = { x: vw / 2 - bandW / 2, y: top, w: bandW, h: Math.max(0, Math.min(BAND, vh - 16 - top)) };
-      avoid = [];
       gap = 12;   // minimum space between two texts (px)
+      const stacked = tags.reduce((sum, el) => sum + el.offsetHeight + gap, 40);   // all texts stacked, plus room to vary
+      area = { x: vw / 2 - bandW / 2, y: top, w: bandW, h: Math.max(0, Math.min(Math.max(BAND, stacked), vh - 16 - top)) };
+      avoid = [];
     } else {
       const t = topBox.getBoundingClientRect();
       area = { x: 16, y: 16, w: vw - 32, h: vh - 32 };
