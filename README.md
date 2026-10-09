@@ -17,7 +17,7 @@ Browsers block sound until the visitor's first click, tap or key press; the page
 
 ## Settings 
 
-| Setting | 
+| Setting | What it does |
 |---|---|
 | `CHAR_PX` | Character size for the rain and both logos (8px). Smaller = more detailed logos, harder to read. |
 | `LOGO_REVEAL_MS` | How long the logos take to form on load. |
