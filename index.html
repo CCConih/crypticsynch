@@ -105,7 +105,7 @@
     left: 50%;
     top: 50%;
     width: clamp(170px, 50vmin, 400px);
-    aspect-ratio: 1;
+    aspect-ratio: 78.892 / 52.624;    /* the cat's width / height */
     transform: translate(-50%, -50%);
     z-index: 1000;                    /* above rain and spotlight */
     pointer-events: none;
@@ -116,14 +116,14 @@
   @media (max-width: 600px) {          /* phones: fill the width, but leave room above/below for the texts */
     .logo { width: min(100vw - 32px, 60vh); }
   }
-  .logo.cat {                         /* the cat sits top-centre; 52.624 / 78.892 = its height / width */
-    --w: clamp(150px, 32vmin, 300px);
+  .logo.top {                         /* the 1024 mark sits top-centre, square */
+    --w: clamp(120px, 28vmin, 220px);
     width: var(--w);
-    aspect-ratio: 78.892 / 52.624;
-    top: calc(16px + var(--w) * 0.667 / 2);
+    aspect-ratio: 1;
+    top: calc(16px + var(--w) / 2);
   }
-  @media (max-width: 600px) {          /* phones: wider cat so its line-art keeps enough characters */
-    .logo.cat { --w: min(60vw, 45vh); }
+  @media (max-width: 600px) {
+    .logo.top { --w: min(60vw, 25vh); }
   }
   .logo canvas {
     position: absolute;
@@ -232,12 +232,12 @@
   <div class="scene" id="scene"></div>
 
   <canvas id="rain" aria-hidden="true"></canvas>
-  <div class="logo cat" role="img" aria-label="Cat logo">
+  <div class="logo top" role="img" aria-label="1024 logo">
     <canvas class="base"></canvas>
     <canvas class="r"></canvas>
     <canvas class="g"></canvas>
   </div>
-  <div class="logo main" role="img" aria-label="Logo">
+  <div class="logo center" role="img" aria-label="Cat logo">
     <canvas class="base"></canvas>
     <canvas class="r"></canvas>
     <canvas class="g"></canvas>
@@ -424,7 +424,7 @@
   });
   const rampColor = (l) => RAMP[Math.max(0, Math.min(63, Math.round(l * 63)))];
 
-  const logoBox = document.querySelector('.logo.main');
+  const centerBox = document.querySelector('.logo.center');
   const logoStart = performance.now();
 
   // A logo drawn as falling code: the mask's brightness drives falling streams + sparkle.
@@ -552,10 +552,10 @@
     return { size, step };
   }
 
-  const catBox = document.querySelector('.logo.cat');
+  const topBox = document.querySelector('.logo.top');
   const logos = [
-    binaryLogo(logoBox, LOGO_MASK, '1024'),
-    binaryLogo(catBox, CAT_MASK, 'H', false),
+    binaryLogo(centerBox, CAT_MASK, 'H'),
+    binaryLogo(topBox, LOGO_MASK, '1024', false),
   ];
 
   // =====================================================================
@@ -596,17 +596,17 @@
   // empty space around it (from the logo and from every other text).
   function placeTags() {
     const vw = window.innerWidth, vh = window.innerHeight;
-    const logoSize = logoBox.offsetWidth;   // the CSS decides the size
+    const cw = centerBox.offsetWidth, ch = centerBox.offsetHeight;   // the CSS decides the size
     const edge = 16;
     const hit = (a, b, g) => a.x - g < b.x + b.w && a.x + a.w + g > b.x && a.y - g < b.y + b.h && a.y + a.h + g > b.y;
     const order = shuffle(tags.slice());
 
     let gap = Math.max(48, Math.min(vw, vh) * 0.12);
     for (let attempt = 0; attempt < 8; attempt++) {
-      const cat = catBox.getBoundingClientRect();
+      const top = topBox.getBoundingClientRect();
       const placed = [
-        { x: vw / 2 - logoSize / 2, y: vh / 2 - logoSize / 2, w: logoSize, h: logoSize },
-        { x: cat.left, y: cat.top, w: cat.width, h: cat.height },
+        { x: vw / 2 - cw / 2, y: vh / 2 - ch / 2, w: cw, h: ch },
+        { x: top.left, y: top.top, w: top.width, h: top.height },
       ];
       const boxes = [];
       let ok = true;
