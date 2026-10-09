@@ -113,6 +113,9 @@
     filter: drop-shadow(0 0 22px rgba(70, 110, 255, .35));
     animation: jitter 3.7s steps(1) infinite;
   }
+  @media (max-width: 600px) {          /* phones: fill the width, but leave room above/below for the texts */
+    .logo { width: min(100vw - 32px, 60vh); }
+  }
   .logo canvas {
     position: absolute;
     inset: 0;
@@ -521,7 +524,7 @@
   // empty space around it (from the logo and from every other text).
   function placeTags() {
     const vw = window.innerWidth, vh = window.innerHeight;
-    const logoSize = Math.min(Math.max(170, Math.min(vw, vh) * 0.40), 360);
+    const logoSize = logoBox.offsetWidth;   // the CSS decides the size
     const edge = 16;
     const hit = (a, b, g) => a.x - g < b.x + b.w && a.x + a.w + g > b.x && a.y - g < b.y + b.h && a.y + a.h + g > b.y;
     const order = shuffle(tags.slice());
